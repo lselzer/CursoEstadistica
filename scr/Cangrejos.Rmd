@@ -46,6 +46,10 @@ ggpairs(crab[,c(2,3,4,5,1)], title = "Gráfico Exploratorio")
 
 ## Modelo Poisson {.smaller}
 
+Formula: Satelite ~ Ancho  
+Distribución: Poisson  
+Link: log  
+
 ```{r poisson}
 crab_ancho <- glm(formula = Satélites ~ Ancho, 
                  family = poisson(link = log), data = crab)
@@ -68,16 +72,26 @@ anova(crab_ancho, test = "Chisq")
 ```
 
 ## {.build}
-
+Los coeficientes están en la escala logaritmica.
 ```{r poisson coef}
 coef(crab_ancho)
-exp(crab_ancho$coef[2])
-AIC(crab_ancho)
-od(crab_ancho)
 ```
+Por ejemplo, para pasar a la escala de la variable hay que aplicar la inversa de
+la función *link*. En este caso exp(`r crab_ancho$coef[2]`)=`r exp(crab_ancho$coef[2])`.
 
-## Matriz de Diseño
+El AIC=`r AIC(crab_ancho)`.
 
+Podemos ver si hay sobredispersión usando la deviance/gl_deviance. Si no hay 
+sobresdispersion será igual a 1
+En este caso es `r od(crab_ancho)`
+
+
+
+## Matriz de Diseño {.columns-2}
+
+- La matriz de diseño en este caso es bastante sencilla:
+    - una columna para la ordernada al origen (Intercept)
+    - una columna para la variable continua (Ancho)
 ```{r poisson model.matrix}
 head(model.matrix(crab_ancho), 15)
 ```
@@ -91,9 +105,10 @@ ggresid(crab_ancho)
 ---
 
 ```{r poisson grafico ajuste, echo=FALSE}
-qplot(Ancho, .fitted, data = fortify(crab_ancho, type = "response")) +
-  geom_line() +
-  geom_point(aes(y = Satélites), colour = "red")
+qplot(Ancho, Satelites, data = fortify(crab_ancho, type = "response")) +
+  geom_line(aes(y = .fitted), colour = "red") +
+  geom_point(aes(y = .fitted), colour = "red") +
+  gg
 ```
 
 ## Modelo Poisson link = identity
