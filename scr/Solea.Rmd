@@ -44,7 +44,7 @@ Solea_logist <- glm(Solea_solea ~ salinity,
 ```
 
 *Solea solea* Lenguado  
-- Prescencia  
+- Presencia  
 - Salinidad  
 - Temperatura  
 
@@ -55,9 +55,14 @@ Solea_logist <- glm(Solea_solea ~ salinity,
 Publicado bajo la licencia Public domain vía Wikimedia Commons
 --->
 
+```{r datos summary}
+summary(Solea)
+```
+
+
 ## {.smaller}
 
-```{r summary}
+```{r summary model}
 summary(Solea_logist)
 ```
 
