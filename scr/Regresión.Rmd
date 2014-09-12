@@ -1,0 +1,52 @@
+---
+title: "Regresión"
+author: "Luciano Selzer"
+date: "Wednesday, August 27, 2014"
+output: ioslides_presentation
+---
+
+# Preeliminares
+
+## Cargo los datos
+
+```{r library, include=FALSE, cache=FALSE }
+library(reshape2)
+library(magrittr)
+library(ggplot2)
+library(lawstat) 
+library(lsmeans)
+library(pander)
+```
+
+```{r set_options, cache=FALSE, include=FALSE}
+panderOptions("table.style", "rmarkdown")
+```
+
+
+```{r load_data}
+arboles <- read.csv("../dat/Regresión.csv", header=TRUE, sep=';',
+                    encoding = "UTF-8")
+summary(arboles)
+```
+
+## Slide with Bullets
+
+```{r regresion ñire}
+Toneladas <- lm(Ton.CO2 ~ Ñire, data = arboles)
+anova(Toneladas)
+summary(Toneladas)
+```
+
+
+## Slide with R Code and Output
+
+```{r}
+summary(cars)
+```
+
+## Slide with Plot
+
+```{r, echo=FALSE}
+plot(cars)
+```
+

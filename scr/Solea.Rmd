@@ -1,0 +1,113 @@
+---
+title: "Binomial"
+author: "Luciano Selzer"
+date: "Wednesday, September 03, 2014"
+output: ioslides_presentation
+---
+
+## Cargando los datos {.columns-2}
+
+```{r library, include=FALSE, cache=FALSE }
+library(reshape2)
+library(magrittr)
+library(ggplot2)
+library(lawstat) 
+library(lsmeans)
+library(pander)
+library(GGally)
+library(MASS)
+library(knitr)
+library(rsm)
+library(rgl)
+source("multiplot.R")
+source("deviance_test.R")
+source("persp3d.lm.R")
+source("contour-glm.R")
+```
+
+```{r set_options, cache=FALSE, include=FALSE}
+panderOptions("table.style", "rmarkdown")
+opts_chunk$set(echo = FALSE)
+knit_hooks$set(webgl = hook_webgl)
+```
+
+```{r setup, results='asis', echo=FALSE}
+cat('<script type="text/javascript">', readLines(system.file('WebGL', 'CanvasMatrix.js', package = 'rgl')), '</script>', sep = '\n')
+```
+
+
+```{r cargar datos}
+Solea <- read.table("../dat/Solea.txt", header = T)
+Solea_logist <- glm(Solea_solea ~ salinity, 
+  				data = Solea, family = binomial)
+
+```
+
+*Solea solea* Lenguado  
+- Prescencia  
+- Salinidad  
+- Temperatura  
+
+<img src="http://upload.wikimedia.org/wikipedia/commons/a/af/Sosol_u0.gif" width="316px" height="162px" />
+
+<!---
+![Solea solea](http://upload.wikimedia.org/wikipedia/commons/a/af/Sosol_u0.gif)  
+Publicado bajo la licencia Public domain vía Wikimedia Commons
+--->
+
+## {.smaller}
+
+```{r summary}
+summary(Solea_logist)
+```
+
+---
+
+```{r grafico ajuste, echo = FALSE, message=FALSE}
+
+qplot(salinity, .fitted, data = fortify(Solea_logist, type  = "response"),
+      geom = "line") +
+  geom_point(aes(y = Solea_solea)) + 
+  annotate("text", x = 25, y = .75, label = formula_coef(Solea_logist), 
+           parse = TRUE)
+```
+
+---
+
+```{r grafico diagnostico, echo=FALSE, message=FALSE}
+
+ggresid(Solea_logist)
+
+
+```
+
+Sobredispersion: `r deviance(Solea_logist)/df.residual(Solea_logist)`
+
+
+## Dos variables continuas
+
+```{r}
+Solea_logist.2 <- glm(Solea_solea ~ temperature + salinity, 
+  				data = Solea, family = binomial)
+```
+
+## {.smaller}
+
+```{r}
+summary(Solea_logist.2)
+```
+
+
+---
+
+
+```{r, results='asis', echo=FALSE}
+pandoc.table(BIC_coef(Solea_logist.2))
+```
+
+## Superficie de respuesta
+
+```{r rgl_Solea_logist2, echo=FALSE, results='hide', webgl=TRUE, fig.height=3, fig.width=4}
+persp3d.glm(Solea_logist.2, salinity ~ temperature, zlab = "Solea", type = "response")
+```
+

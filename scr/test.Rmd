@@ -1,0 +1,20 @@
+---
+title: RGL in Slidify
+framework: io2012
+---
+ 
+```{r setup}
+library(knitr)
+knit_hooks$set(webgl = hook_webgl)
+```
+
+```{r setup2, results='asis', echo=FALSE}
+cat('<script type="text/javascript">', readLines(system.file('WebGL', 'CanvasMatrix.js', package = 'rgl')), '</script>', sep = '\n')
+```
+ 
+```{r testgl, webgl = TRUE}
+x <- sort(rnorm(1000))
+y <- rnorm(1000)
+z <- rnorm(1000) + atan2(x,y)
+plot3d(x, y, z, col=rainbow(1000))
+```

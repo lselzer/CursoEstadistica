@@ -1,0 +1,171 @@
+---
+title       : ANOVA
+subtitle    : Ejemplo en R
+author      : Luciano Selzer
+job         : Asistente Pricipal - UNTDF
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : []            # {mathjax, quiz, bootstrap}
+mode        : selfcontained # {standalone, draft}
+knit        : slidify::knit2slides
+---
+
+## Cargo los datos
+
+```{r library, cache=FALSE, include=FALSE }
+library(reshape2)
+library(magrittr)
+library(ggplot2)
+library(lawstat) 
+library(lsmeans)
+library(pander)
+library(rgl)
+```
+```{r set_options, cache=FALSE, include=FALSE}
+panderOptions("table.style", "rmarkdown")
+```
+
+
+```{r load_data}
+molerat <- read.csv("../dat/anova.csv" , header=TRUE, sep=";")
+molerat
+```
+
+---
+
+## Conviertiendo el formato
+Los datos están en formato ancho, hay que convertirlo en largo
+
+```{r warning=FALSE, message=FALSE}
+molerat <- melt(molerat, variable.name = "colonia", value.name = "n_vivos")
+head(molerat)
+```
+
+---
+
+## Boxplot
+
+```{r fig.align='center', echo=FALSE}
+qplot(colonia, n_vivos, data = molerat, geom = "boxplot")
+```
+
+
+---
+
+## Sumario de número de vivos
+
+```{r}
+summary(molerat$n_vivos)
+```
+
+
+
+---
+
+## ¿Hay homocedacia?
+
+```{r}
+with(molerat, levene.test (n_vivos, group = colonia))
+```
+
+
+---
+
+## Anova
+
+```{r}
+molerat_aov <-aov(n_vivos ~ colonia, data = molerat) 
+summary(molerat_aov)
+lsmeans(molerat_aov, "colonia")
+
+```
+
+---
+
+## Gráficos de Diagnóstico
+
+```{r fig.align='center', fig.subcap="Normalidad", echo=FALSE}
+molerat_fort <- fortify(molerat_aov, molerat)
+
+qplot(sample = molerat_fort$.resid) + geom_abline(intercept = 0, slope = 1)
+
+```
+
+
+---
+
+## Gráficos de Diagnóstico
+
+```{r fig.align='center', echo=FALSE}
+qplot(y = .resid, data = molerat_fort) + labs(x = "index", y = "Residuales")
+```
+
+---
+
+## Gráficos de Diagnóstico
+
+```{r fig.align='center', echo=FALSE}
+qplot(x = .fitted, y = .resid, data = molerat_fort) + 
+  labs(x = "Predichos", y = "Residuales")
+
+```
+
+
+---
+
+## Matriz de diseño
+
+```{r}
+model.matrix(molerat_aov)
+```
+
+---
+
+## Sin el intercepto
+
+```{r}
+molerat_aov_nointercept <- update(molerat_aov, .~ -1 + colonia)
+model.matrix(molerat_aov_nointercept)
+
+```
+
+
+---
+
+## No cambia el resultado
+
+```{r}
+summary(molerat_aov_nointercept)
+```
+
+---
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+
+---
+ 
+```{r setup, echo=FALSE}
+knitr::knit_hooks$set(webgl = hook_webgl)
+```
+ 
+```{r testgl, echo = FALSE, webgl = TRUE}
+x <- sort(rnorm(1000))
+y <- rnorm(1000)
+z <- rnorm(1000) + atan2(x,y)
+plot3d(x, y, z, col=rainbow(1000))
+```

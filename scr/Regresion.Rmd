@@ -1,0 +1,207 @@
+---
+title: "Regresión"
+author: "Luciano Selzer"
+date: "Wednesday, August 27, 2014"
+output: ioslides_presentation
+---
+
+# Preeliminares
+
+## Cargo los datos
+
+```{r library, include=FALSE, cache=FALSE }
+library(reshape2)
+library(magrittr)
+library(ggplot2)
+library(lawstat) 
+library(lsmeans)
+library(pander)
+```
+
+```{r set_options, cache=FALSE, include=FALSE}
+panderOptions("table.style", "rmarkdown")
+```
+
+
+```{r load_data}
+arboles <- read.csv("../dat/Regresion.csv", header=TRUE, sep=';',
+                    encoding = "UTF-8")
+summary(arboles)
+```
+
+## Regresión para ñire
+
+```{r regresion ñire}
+Toneladas <- lm(ton.CO2 ~ ñire, data = arboles)
+anova(Toneladas)
+```
+
+---
+
+```{r summary ñire}
+summary(Toneladas)
+```
+
+---
+
+```{r ton.co2 antartica, echo=FALSE, fig.align='center'}
+qplot(ñire, ton.CO2, data = arboles)
+```
+
+
+---
+
+```{r AIC ñire}
+AIC(Toneladas)
+coef(Toneladas)
+```
+
+---
+
+```{r model.matrix ñire}
+model.matrix(Toneladas)
+```
+
+
+---
+
+```{r ton.co2_stdresid antartica, echo=FALSE, message=FALSE}
+qplot(ton.CO2, .stdresid, data = Toneladas) + geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0)
+```
+
+
+---
+
+```{r resid antartica, echo=FALSE, message=FALSE}
+qplot(seq_along(.stdresid), .stdresid, data = Toneladas, geom  = "point") + geom_hline(yintercept = 0)
+```
+
+---
+
+```{r fitted antartica, echo=FALSE, message=FALSE}
+qplot(proyecto, .fitted, data = fortify(Toneladas, arboles), geom  = "point") + 
+  geom_line() +
+  geom_point(aes(y = ton.CO2), colour = "red")
+```
+
+## Modelo con Múltiples regresoras
+
+```{r}
+Ton.mult <- lm(ton.CO2 ~ ñire * alerce * ciprés * oregon, data = arboles)
+anova(Ton.mult)
+
+```
+
+---
+```{r}
+summary(Ton.mult)
+```
+
+---
+
+```{r repetir_grafico, ref.label="ton.co2 antartica"}
+```
+
+
+---
+
+```{r aic mult}
+AIC(Ton.mult)
+coef(Ton.mult)
+```
+
+---
+
+```{r model.matrix mult}
+model.matrix(Ton.mult)
+```
+
+
+```{r ton.co2_stdresid mult, echo=FALSE, message=FALSE}
+qplot(ton.CO2, .stdresid, data = Ton.mult) + geom_smooth(se = FALSE) +
+  geom_hline(yintercept = 0)
+```
+
+
+---
+
+```{r resid mult, echo=FALSE, message=FALSE}
+qplot(seq_along(.stdresid), .stdresid, data = Ton.mult, geom  = "point") + geom_hline(yintercept = 0)
+```
+
+---
+
+```{r fitted mult, echo=FALSE, message=FALSE}
+qplot(proyecto, .fitted, data = fortify(Toneladas, arboles), geom  = "point") + 
+  geom_line() +
+  geom_point(aes(y = ton.CO2), colour = "red")
+```
+
+---
+
+```{r}
+qplot(ñire, ton.CO2, data = arboles, geom = "point") + 
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+## Rutina de selección automática basada en AIC
+
+```{r stepwise}
+selecauto <- step(Ton.mult, direction = "backward")
+anova(selecauto, test = "Chisq")
+```
+
+---
+
+```{r stepwise summary}
+summary(selecauto)
+```
+
+---
+
+```{r stepwise coef}
+coef(selecauto)
+```
+
+---
+
+```{r stepwise fitted, echo=FALSE}
+qplot(proyecto, .fitted, data = fortify(selecauto, arboles), geom = "point") +
+  geom_line() +
+  geom_point(aes(y = ton.CO2), colour = "red")
+  
+```
+
+## Modelo a probar
+
+```{r modelo_red}
+Ton <- lm(ton.CO2 ~ ñire * alerce + ciprés:oregon, data = arboles)
+anova(Ton)
+```
+
+---
+
+```{r}
+summary(Ton)
+```
+
+---
+
+```{r}
+AIC(Ton)
+```
+
+---
+
+```{r}
+Ton <- lm(ton.CO2 ~ ñire + ciprés + oregon + ñire:ciprés + ciprés:oregon, 
+data = arboles)
+anova(Ton)
+```
+
+```{r}
+summary(Ton)
+AIC(Ton) 
+```
+

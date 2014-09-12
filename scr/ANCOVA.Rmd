@@ -1,0 +1,167 @@
+---
+title: "ANCOVA"
+author: "Luciano Selzer"
+subtitle: "Ejemplo en R"
+job: "Asistente Pricipal - UNTDF"
+output: ioslides_presentation
+---
+
+# Preeliminares
+
+## Cargo los datos
+
+```{r library, include=FALSE, cache=FALSE }
+library(reshape2)
+library(magrittr)
+library(ggplot2)
+library(lawstat) 
+library(lsmeans)
+library(pander)
+```
+
+```{r set_options, cache=FALSE, include=FALSE}
+panderOptions("table.style", "rmarkdown")
+```
+
+
+```{r load_data}
+colest <- read.csv ("../dat/ancova.csv", header=TRUE, sep=';')
+```
+
+
+
+## Gráficos Preeliminares | Boxplot
+
+```{r boxplot, echo=FALSE}
+qplot(edad, colesterol, data = colest, geom = "boxplot", 
+      group=interaction(edad, region))
+```
+
+
+
+## Gráficos Preeliminares | Scatterplot
+```{r scatterplot, echo=FALSE}
+qplot(edad, colesterol, data = colest, geom = "point", colour = region)
+```
+
+
+
+## Formato de datos
+
+```{r data_summary}
+summary(colest)
+```
+
+```{r to_factor, include=FALSE}
+colest %<>% transform(region = as.factor(region))
+```
+
+
+
+## Supuestos de ANCOVA | Homocedacia
+
+```{r}
+with(colest, levene.test(colesterol, group = region))
+```
+
+
+
+# Análisis
+
+## Regresión
+
+
+```{r regresion, echo=FALSE, results='asis'}
+region1 <- lm(colesterol ~ edad, data = colest, region == 1)
+region1  %>% 
+  anova %>%
+  pandoc.table(caption = "Región 1")
+region2 <- lm(colesterol ~ edad, data = colest, region == 2)
+region2  %>% 
+  anova %>%
+  pandoc.table(caption = "Región 2")
+
+```
+
+
+## Regresión |  Coeficientes {.smaller}
+
+Región 1
+```{r region_1, echo=FALSE}
+summary(region1)
+
+```
+
+## Regresión |  Coeficientes {.smaller}
+
+Región 2
+```{r region_2, echo=FALSE}
+summary(region2)
+
+```
+
+## Prueba de paralelismo {.smaller}
+
+
+```{r paralelismo, echo=1}
+paralelismo <- lm(colesterol ~ region * edad, data = colest)
+paralelismo %>% anova 
+```
+
+----
+
+```{r paralelismo_summ, echo=FALSE}
+paralelismo %>% summary
+```
+
+
+## AJUSTE DEL MODELO DE ANCOVA
+
+```{r ANCOVA, echo=1}
+ancova <- lm(colesterol ~ edad + region, , data = colest)
+anova(ancova)
+```
+
+---
+
+```{r ANCOVA_summary, echo=FALSE}
+summary(ancova)
+```
+
+---
+
+```{r coeficientes}
+coef(ancova)
+fitted(ancova)
+
+
+```
+
+---
+
+```{r grafico, echo=FALSE, message=FALSE}
+qplot(colesterol, .stdresid, data = ancova) +
+  geom_hline(yintercept = 0) +
+  geom_smooth(se = FALSE)
+```
+
+
+## Matriz de diseño {.smaller}
+
+```{r model.matrix, echo=FALSE}
+model.matrix(ancova)
+```
+
+## Graficos de los resultados
+
+```{r grafico final, echo=FALSE}
+ggplot(aes(edad, colesterol), data = colest) +
+  geom_point(aes(colour = region)) +
+  geom_smooth(method = "lm", se = FALSE, aes(colour = region)) +
+  geom_smooth(method = "lm", group = NULL, se = FALSE, 
+              colour = "black", size = 2)
+```
+
+
+
+

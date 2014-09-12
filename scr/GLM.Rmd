@@ -1,0 +1,549 @@
+---
+title: "GLM"
+author: "Luciano Selzer"
+date: "Friday, August 29, 2014"
+output: ioslides_presentation
+---
+
+## Cargando los datos
+
+```{r library, include=FALSE, cache=FALSE }
+library(reshape2)
+library(magrittr)
+library(ggplot2)
+library(lawstat) 
+library(lsmeans)
+library(pander)
+library(GGally)
+```
+
+```{r set_options, cache=FALSE, include=FALSE}
+panderOptions("table.style", "rmarkdown")
+```
+
+```{r cargar datos}
+crab <- read.csv("../dat/Horseshoecrab-GLM.csv", sep = ";", dec = ",")
+```
+```{r graficos iniciales, echo=FALSE, fig.align='center'}
+crab <- crab[, c(5, 6, 7, 3, 4, 1, 2)]
+ggpairs(crab)
+```
+
+
+## Modelo Poisson {.smaller}
+
+```{r poisson}
+crab_ancho <- glm(formula = Satélites ~ Ancho, 
+                 family = poisson(link = log), data = crab)
+crab_ancho
+```
+
+
+## {.smaller}
+
+```{r poisson summary}
+summary(crab_ancho)
+```
+
+--- 
+
+```{r poisson chisq}
+anova(crab_ancho, test = "Chisq")
+```
+
+## {.build}
+
+```{r poisson coef}
+coef(crab_ancho)
+exp(crab_ancho$coef[2])
+AIC(crab_ancho)
+```
+
+---
+
+```{r poisson model.matrix}
+head(model.matrix(crab_ancho), 15)
+```
+
+---
+
+```{r poisson grafico ajuste, echo=FALSE}
+qplot(Ancho, .fitted, data = fortify(crab_ancho, type = "response")) +
+  geom_line() +
+  geom_point(aes(y = Satélites), colour = "red")
+```
+
+## Modelo Poisson link = identity
+Ajuste de la regresión de poisson con el identity link
+```{r poisson id}
+id.crab_ancho <- glm(formula = Satélites ~ 1 + Ancho, 
+                     family = poisson(link = identity), 
+                     data = crab, start = coef(crab_ancho))
+id.crab_ancho
+```
+
+
+## {.smaller}
+
+```{r poisson id summary}
+summary(id.crab_ancho)
+```
+
+```{r poisson id anova}
+anova(id.crab_ancho, test = "Chisq")
+```
+
+## Comparación 
+```{r poisson comp, echo=FALSE}
+qplot(Ancho, Satélites, data = fortify(crab_ancho, type = "response"), 
+                                     geom = "point") +
+  geom_line(aes(y = .fitted), colour = "red") +
+  geom_line(data = fortify(id.crab_ancho), aes(y = .fitted), colour = "blue") +
+  annotate("text", x = 22, y = 2, label = "Vínculo log", colour = "red") +
+  annotate("text", x = 32, y = 5, label = "Vínculo Identidad", colour = "blue")
+```
+
+
+## Modelo Nulo {.smaller}
+
+Ahora vamos a probar distintos modelos con el link Log(es el default para la familia poisson)
+
+```{r poisson null}
+crab_null <- glm(formula = Satélites ~ 1, 
+                 family = poisson, data = crab)
+anova(crab_null, test = "Chisq")
+AIC(crab_null)
+```
+
+---
+
+```{r poisson null grafico, echo=FALSE}
+qplot(Ancho, Satélites, data = fortify(crab_null, crab, type = "response"), 
+                                     geom = "point") +
+  geom_line(aes(y = .fitted), colour = "red")
+```
+
+
+## Sólo los predictores contínuos | Aditivo {.smaller}
+
+```{r poisson cont}
+crab_cont.1 <- glm(formula = Satélites ~ Ancho + Peso,
+                  family = poisson, data = crab)
+anova(crab_cont.1, test = "Chisq")
+```
+
+## {.smaller}
+
+```{r poisson cont summary}
+summary(crab_cont.1)
+```
+
+---
+
+```{r poisson cont confint, message=FALSE}
+confint(crab_cont.1)
+pchisq(crab_cont.1$deviance, crab_cont.1$df.residual, lower.tail = FALSE)
+AIC(crab_cont.1)
+```
+---
+
+```{r poisson cont grafico, echo=FALSE}
+qplot(Ancho, Satélites, data = fortify(crab_cont.1, type = "response")) +
+  geom_line(aes(y = .fitted), colour = "red") +
+  geom_point(aes(y = .fitted), colour = "red")
+```
+
+
+## Sólo los predictores contínuos | Interacción {.smaller}
+
+```{r poisson cont interaccion}
+crab_cont.2 <- glm(formula = Satélites ~ Ancho * Peso,
+family = poisson, data = crab)
+anova(crab_cont.2, test = "Chisq")
+```
+
+## {.smaller}
+
+```{r poisson cont interaccion summary}
+summary(crab_cont.2)
+```
+
+---
+
+```{r poisson cont interaccion confint}
+confint(crab_cont.2)
+pchisq(crab_cont.2$deviance, crab_cont.2$df.residual, lower.tail = FALSE)
+AIC(crab_cont.2)
+```
+
+---
+
+```{r poisson cont interaccion grafico, echo=FALSE}
+qplot(Ancho, Satélites, data = fortify(crab_cont.2, type = "response")) +
+  geom_line(aes(y = .fitted), colour = "red") +
+  geom_point(aes(y = .fitted), colour = "red")
+```
+
+## Comparación {.build}
+
+Evalúo la deviance para estos dos modelos anidados
+$deviance_{m1}-deviance_{m2}\overset{}{\sim}\chi^{2}_{gl1-gl2}$
+```{r poisson comp aditivoVSinteraccion chisq}
+pchisq(crab_cont.1$deviance - crab_cont.2$deviance, 
+       crab_cont.1$df.residual - crab_cont.2$df.residual, 
+       lower.tail = FALSE)
+anova(crab_cont.1, crab_cont.2, test = "Chisq")
+```
+
+## Predictores Continuos y Categóricos {.smaller}
+
+```{r poisson con_cat}
+crab_saturated <- glm(Satélites ~ Color * Espina * Ancho * Peso,
+                      family = poisson, 
+                      data = crab)
+```
+
+## {.smaller}
+
+```{r poisson con_cat anova}
+anova(crab_saturated, test = "Chisq")
+
+
+## {.smaller}
+
+```{r poisson con_cat summary}
+summary(crab_saturated)
+```
+
+---
+
+```{r poisson con_cat graficho, echo=FALSE}
+qplot(Ancho, Satélites, data = fortify(crab_saturated, type = "response")) +
+  geom_line(aes(y = .fitted), colour = "red") +
+  geom_point(aes(y = .fitted), colour = "red")
+```
+
+---
+
+```{r poisson con_cat chisq}
+pchisq(crab_saturated$deviance, crab_saturated$df.residual, lower.tail = FALSE)
+AIC(crab_saturated)
+```
+
+## Predictores Categóricos y Contínuos | Modelo Aditivo {.smaller}
+
+```{r poisson cat_cont add}
+crab_aditivo <- glm(Satélites ~ Color + Espina + Ancho + Peso, 
+                    family = poisson, 
+                    data = crab)
+anova(crab_aditivo, test = "Chisq")
+```
+
+## {.smaller}
+
+```{r poisson cat_cont add summary}
+summary(crab_aditivo)
+```
+
+---
+
+```{r poisson cat_cont add grafico, echo=FALSE}
+qplot(Ancho, Satélites, data = fortify(crab_aditivo, type = "response")) +
+  geom_line(aes(y = .fitted), colour = "red") +
+  geom_point(aes(y = .fitted), colour = "red")
+```
+
+---
+
+```{r poisson cat_cont add  chisq}
+pchisq(crab_aditivo$deviance, crab_aditivo$df.residual, lower.tail = FALSE)
+AIC(crab_aditivo)
+```
+
+## Modelo Aditivo | Identidad
+
+```{r poisson cat_cont add id}
+crab_aditivo_id <- glm(Satélites ~ Color + Espina + Ancho + Peso,  
+                    family = poisson(link = identity), 
+                    data = crab, start = coef(crab_aditivo))
+#anova(crab_aditivo_id, test = "Chisq")
+```
+
+---
+
+```{r poisson cat_cont add id summary}
+summary(crab_aditivo_id)
+```
+
+---
+
+```{r poisson cat_cont add grafico id, echo=FALSE}
+qplot(Ancho, Satélites, data = fortify(crab_aditivo_id, type = "response")) +
+  geom_line(aes(y = .fitted), colour = "red") +
+  geom_point(aes(y = .fitted), colour = "red")
+```
+
+---
+
+```{r poisson cat_cont add id chisq}
+pchisq(crab_aditivo_id$deviance, crab_aditivo_id$df.residual, 
+       lower.tail = FALSE)
+AIC(crab_aditivo_id)
+```
+
+
+## Rutina de selección automática basada en AIC
+
+```{r poisson cat_cont step}
+selecauto <- step(crab_saturated, direction = "backward")
+```
+
+## {.smaller}
+
+```{r poisson cat_cont step anova}
+anova(selecauto, test = "Chisq")
+```
+
+## {.smaller}
+
+```{r poisson cat_cont step summary}
+summary(selecauto)
+```
+
+---
+
+```{r poisson cat_cont step grafico, echo=FALSE}
+qplot(Ancho, Satélites, data = fortify(selecauto, type = "response")) +
+  geom_line(aes(y = .fitted), colour = "red") +
+  geom_point(aes(y = .fitted), colour = "red")
+```
+
+
+## Comparaciónde AIC crudos
+```{r  poisson cat_cont step AIC}
+AIC(crab_saturated, selecauto, crab_aditivo)
+```
+
+## Comparación de la deviance
+
+```{r  poisson cat_cont }
+anova(crab_saturated, selecauto, crab_aditivo, test = "Chisq")
+```
+
+## Modelo Logit con un predictor {.columns-2}
+```{r logit expl, echo=FALSE, fig.height=5, fig.width=4}
+qplot(Ancho, Logit, data = crab)
+qplot(Peso, Logit, data = crab)
+```
+
+---
+
+```{r binomial}
+crab_log <- glm(Logit ~ 1 + Ancho, 
+                family = binomial(link = logit), data = crab)
+crab_log
+```
+
+---
+
+```{r binomial anova}
+anova(crab_log)
+```
+
+## {.smaller}
+
+```{r binomial summary}
+summary(crab_log)
+```
+
+---
+
+```{r binomial confint, message=FALSE}
+confint(crab_log)
+AIC(crab_log)
+```
+
+---
+
+```{r binomial model.matrix}
+head(model.matrix(crab_log), 15)
+```
+
+---
+
+```{r binomial grafico, echo=FALSE}
+qplot(Ancho, Logit, data = fortify(crab_log, type = "response")) +
+  geom_line(aes(y = .fitted), colour = "red") +
+  geom_point(aes(y = .fitted), colour = "red")
+```
+
+## Modelo Logit con varios predictores {.smaller}
+```{r binomial sat, echo=FALSE}
+crab_log_sat <- glm(Logit ~ Ancho * Color * Peso * Espina,
+                    family = binomial(link = logit), 
+                    data = crab)
+crab_log_sat
+```
+
+---
+
+```{r binomial sat anova}
+anova(crab_log_sat)
+```
+
+---
+
+```{r  binomial sat summary}
+summary(crab_log_sat)
+```
+
+---
+
+```{r binomial sat confit, message=FALSE, warning=FALSE}
+confint(crab_log_sat)
+```
+
+---
+
+```{r binomial sat matrix}
+head(model.matrix(crab_log_sat), 15)
+```
+
+
+---
+
+```{r binomial sat AIC}
+AIC(crab_log_sat)
+```
+
+```{r binomial sat grafico, echo=FALSE}
+qplot(Ancho, Logit, data = fortify(crab_log_sat, type = "response")) +
+  geom_line(aes(y = .fitted), colour = "red") +
+  geom_point(aes(y = .fitted), colour = "red")
+```
+
+
+# Rutina de selección automática basada en AIC para el modelo logit
+
+```{r binomial step}
+selecauto_logit <- step(crab_log_sat, direction = "backward")
+```
+
+---
+
+```{r binomial step anova}
+anova(selecauto_logit, test = "Chisq")
+```
+
+---
+
+```{r binomial step summary}
+summary(selecauto_logit)
+```
+
+---
+
+```{r binomial step grafico, echo=FALSE, fig.align='center'}
+qplot(Ancho, Logit, data = fortify(selecauto_logit, type = "response")) +
+  geom_line(aes(y = .fitted), colour = "red") +
+  geom_point(aes(y = .fitted), colour = "red")
+```
+
+---
+
+
+## Modelo Log-Lineal
+
+
+```{r log-lineal}
+tabla.cont <- with(crab, table(Log.lin, Espina, Color))
+ftable(tabla.cont)
+tablafrec <- as.data.frame(tabla.cont)
+```
+
+
+## Modelo aditivo (sin interacciones) 
+También llamado el modelo de independencia
+
+```{r log-lineal modelo}
+aditivo <- glm(Freq ~ Color + Espina + Log.lin, 
+               family = poisson, data = tablafrec)
+anova(aditivo, test = "Chisq")
+```
+
+---
+
+```{r log-lineal summary}
+summary(aditivo)
+```
+
+---
+
+```{r log-lineal chisq}
+pchisq(aditivo$deviance, aditivo$df.residual, lower.tail = FALSE)
+```
+
+Ninguno de los datos por sí solo ajustan
+
+## Modelo saturado
+```{r log-lineal sat}
+saturado <- glm(Freq ~ Color * Espina * Log.lin, 
+                family = poisson, data = tablafrec)
+anova(saturado, test = "Chisq")
+```
+
+---
+
+```{r log-lineal sat summary}
+summary(saturado)
+```
+
+
+---
+
+```{r log-lineal sat chisq}
+pchisq(saturado$deviance, saturado$df.residual, lower.tail = FALSE)
+```
+
+
+## Utilizamos la rutina de selección automática
+```{r log-lineal step}
+selecauto <- step(saturado, direction = "backward")
+```
+
+---
+
+```{r log-lineal step anova}
+anova(selecauto, test = "Chisq")
+```
+
+---
+
+```{r log-lineal step summary}
+summary(selecauto)
+```
+
+## Comparaciónde AIC crudos
+```{r log-lineal AIC}
+AIC(saturado, aditivo, selecauto)
+```
+
+## Comparación de la deviance
+```{r log-lineal anova}
+anova(saturado, aditivo, selecauto)
+```
+
+## R2
+
+```{r log-lineal r2}
+1 - (selecauto$dev/selecauto$null)
+```
+
+
+
+```{r log-lineal grafico, echo=FALSE}
+qplot(Freq, .fitted , data = fortify(selecauto, 
+                                     type = "response")) +
+  geom_line(aes(y = .fitted), colour = "red")
+```
+
